@@ -1,0 +1,38 @@
+---
+title: "Lab_8"
+author: "Cooper"
+date: "March 8, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the packages we'll need
+
+```{r}
+library(tidyverse)
+library(sf)
+library(tmap)
+library(spatstat)
+library(leaflet)
+library(maptools)
+```
+
+###Column graph of Texas oil spills
+```{r}
+oil_spills <- read_csv("oil_spills.csv")
+View(oil_spills)
+
+df <- oil_spills %>%
+  filter(`Accident State` == "TX" & `Accident Year` < 2017) %>%
+  group_by(`Accident Year`)%>%
+  summarise(Loss = sum(`Net Loss (Barrels)`))
+df
+colnames(df) <- c("Year","Loss")
+
+ggplot(df, aes(x= Year, y = Loss)) +
+  geom_col()
+```
+
