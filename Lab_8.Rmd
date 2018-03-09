@@ -51,3 +51,74 @@ leaflet(oil_sf) %>%
   addMarkers()
 ```
 
+## tmap plot with TX state shapefile
+
+```{r}
+states <- st_read(dsn = "." , layer = "states")
+
+tex_border <- states %>%
+  filter(STATE_NAME == "Texas") %>%
+  st_transform(4326)
+plot(tex_border)
+
+tm_shape(tex_border) +
+  tm_polygons()+
+  tm_shape(oil_sf)+
+  tm_dots(size = 0.3)
+```
+
+Convert to spatial points patterns : combination of point data and bounding window
+
+```{r}
+
+spill_sp <- as(oil_sf, "Spatial")
+spill_ppp <- as(spill_sp, "ppp")
+
+tx_sp <- as(tex_border, "Spatial")
+tx_owin <- as(tx_sp, "owin")
+
+all_ppp <- ppp(spill_ppp$x, spill_ppp$y, window = tx_owin)
+```
+
+###A density plot:
+
+```{r}
+plot(density(all_ppp, sigma = 0.4))
+```
+
+### Quadrat test for spatial evenness 
+
+```{r}
+oil_qt <- quadrat.test(all_ppp, nx = 5, ny = 5) #called a test for csr but really a test of evenness, so
+oil_qt
+
+plot(all_ppp)
+plot(oil_qt, add = TRUE, cex = 0.4)
+#conclude data are not evenly distributed#
+```
+
+### G-function for Nearest Neighbor Analysis 
+
+```{r}
+r<- seq(0,1, by = 0.01)
+
+oil_gfun <-envelope(all_ppp, fun =Gest, r = r, nsim = 100)
+
+ggplot(oil_gfun, aes(x = r, y = obs)) + 
+  geom_line(color = "black") +
+  geom_line(aes(x = r, y = theo), color = "red") #theo comes from envelope and nsim
+# our data has higher proportion of point pairs with nearest neighbors at shorter distances compared to csr data => our data is more clustered
+```
+
+#Nearest neighbor using the L-function (Ripley's K but standardized)
+```{r}
+
+r2 <- seq(0,3, by = 0.5)
+
+oil_lfun <- envelope(all_ppp, fun = Lest, r=r2, nsim =20, global = TRUE) #more computationally intensive, so use smaller nsim =>uses those increasing bubbles
+
+ggplot(oil_lfun, aes(x=r2, y=obs))+
+  geom_line(color = "black")+
+  geom_line(aes(x = r2, y = theo), color = "blue")
+```
+
